@@ -11,7 +11,7 @@ local naughty = require("naughty")
 local menubar = require("menubar")
 local hotkeys_popup = require("awful.hotkeys_popup").widget
 
-
+local vicious = require("vicious")
 
 if awesome.startup_errors then
    naughty.notify({ preset = naughty.config.presets.critical,
@@ -105,6 +105,14 @@ mykeyboardlayout = awful.widget.keyboardlayout()
 -- {{{ Wibar
 -- Create a textclock widget
 mytextclock = wibox.widget.textclock()
+
+cpu_widget = wibox.widget.textbox()
+cpu_widget.width = 160
+cpu_widget.align = "right"
+vicious.register(cpu_widget, 
+		 vicious.widgets.cpu,
+		 "<span color='" .. beautiful.bg_focus .. "'> CPU:  $1</span>,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11",
+		 2)
 
 -- Create a wibox for each screen and add it
 local taglist_buttons = awful.util.table.join(
@@ -201,6 +209,7 @@ awful.screen.connect_for_each_screen(function(s)
             layout = wibox.layout.fixed.horizontal,
             -- mylauncher,
             s.mytaglist,
+	    cpu_widget,
             s.mypromptbox,
 	 },
 	 s.mytasklist, -- Middle widget
