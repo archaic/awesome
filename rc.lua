@@ -6,12 +6,15 @@ require("awful.autofocus")
 local wibox = require("wibox")
 -- Theme handling library
 local beautiful = require("beautiful")
+
 -- Notification library
 local naughty = require("naughty")
 local menubar = require("menubar")
 local hotkeys_popup = require("awful.hotkeys_popup").widget
 
 local vicious = require("vicious")
+
+local lanes = require "lanes".configure({demote_full_userdata = true})
 
 if awesome.startup_errors then
    naughty.notify({ preset = naughty.config.presets.critical,
@@ -32,9 +35,9 @@ do
    end)
 end
 
+--theme.wallpaper = "~/media/image/space_art.jpg" 
 
-
-beautiful.init(awful.util.get_themes_dir() .. "sky/theme.lua")
+beautiful.init("~/.config/awesome/theme.lua")
 
 terminal = "urxvt"
 
@@ -107,12 +110,37 @@ mykeyboardlayout = awful.widget.keyboardlayout()
 mytextclock = wibox.widget.textclock()
 
 cpu_widget = wibox.widget.textbox()
-cpu_widget.width = 160
+cpu_widget.width = 300
+cpu_widget.forced_width = 300
 cpu_widget.align = "right"
 vicious.register(cpu_widget, 
 		 vicious.widgets.cpu,
-		 "<span color='" .. beautiful.bg_focus .. "'> CPU:  $1</span>,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11",
+		 function(widget, args)
+		    return string.format("<span color='%s'> CPU: %3d</span>,%3d,%3d,%3d,%3d,%3d,%3d,%3d,%3d   ",
+					 beautiful.bg_focus,
+					 args[1], 
+					 args[2],
+					 args[3],
+					 args[4],
+					 args[5],
+					 args[6],
+					 args[7],
+					 args[8],
+					 args[9])
+		 end,
 		 2)
+
+
+memory_widget = wibox.widget.textbox()
+memory_widget.width = 65
+memory_widget.align = "right"
+vicious.cache(vicious.widgets.mem)
+vicious.register(memory_widget,
+		 vicious.widgets.mem,
+		 "<span color='" .. beautiful.bg_focus .. "'>  Mem: </span>$1%   ", 
+		 2)
+
+
 
 -- Create a wibox for each screen and add it
 local taglist_buttons = awful.util.table.join(
@@ -169,15 +197,33 @@ local function set_wallpaper(s)
    end
 end
 
+progress_widget = wibox.widget {
+   background_color = "#0067ce",
+   border_color     = "#eeeeec",
+   border_width     = 2,
+   color            = "#00FF7F",
+   forced_height    = 10,
+   forced_width     = 150,
+   margins          = 5,
+   max_value        = 1,
+   paddings         = 1,
+   value            = 0.0,
+   widget           = wibox.widget.progressbar,
+}
+
 -- Re-set wallpaper when a screen's geometry changes (e.g. different resolution)
 screen.connect_signal("property::geometry", set_wallpaper)
+
+padding = wibox.widget.textbox()
+padding.forced_width = 10
+padding.width = 10
 
 awful.screen.connect_for_each_screen(function(s)
 
       set_wallpaper(s)
 
       -- Each screen has its own tag table.
-      awful.tag({'I', 'II', 'III', 'IV'}, 
+      awful.tag({'I', 'II', 'III', 'IV', 'V'}, 
 	 s, 
 	 awful.layout.suit.floating)
 
@@ -193,44 +239,49 @@ awful.screen.connect_for_each_screen(function(s)
 			       awful.button({ }, 4, function () awful.layout.inc( 1) end),
 			       awful.button({ }, 5, function () awful.layout.inc(-1) end)))
 
-      -- Create a taglist widget
-      s.mytaglist = awful.widget.taglist(s, awful.widget.taglist.filter.all, taglist_buttons)
+      if s.index == 1 then
+	 
+	 -- Create a taglist widget
+	 s.mytaglist = awful.widget.taglist(s, awful.widget.taglist.filter.all, taglist_buttons)
 
-      -- Create a tasklist widget
-      s.mytasklist = awful.widget.tasklist(s, awful.widget.tasklist.filter.currenttags, tasklist_buttons)
+	 -- Create a tasklist widget
+	 s.mytasklist = awful.widget.tasklist(s, awful.widget.tasklist.filter.currenttags, tasklist_buttons)
 
-      -- Create the wibox
-      s.mywibox = awful.wibar({ position = "bottom", screen = s, height = "40" })
+	 -- Create the wibox
+	 s.mywibox = awful.wibar({ position = "bottom", screen = s, height = "50" })
 
-      -- Add widgets to the wibox
-      s.mywibox:setup {
-	 layout = wibox.layout.align.horizontal,
-	 { -- Left widgets
-            layout = wibox.layout.fixed.horizontal,
-            -- mylauncher,
-            s.mytaglist,
-	    cpu_widget,
-            s.mypromptbox,
-	 },
-	 s.mytasklist, -- Middle widget
-	 { -- Right widgets
-            layout = wibox.layout.fixed.horizontal,
-            mykeyboardlayout,
-            wibox.widget.systray(),
-            mytextclock,
-            s.mylayoutbox,
-	 },
-      }
+	 -- Add widgets to the wibox
+	 s.mywibox:setup {
+	    layout = wibox.layout.align.horizontal,
+	    { -- Left widgets
+	       layout = wibox.layout.fixed.horizontal,
+	       -- mylauncher,
+	       s.mytaglist,
+	       cpu_widget,
+	       memory_widget,
+	       s.mypromptbox,
+	    },
+	    s.mytasklist, -- Middle widget
+	    { -- Right widgets
+	       layout = wibox.layout.fixed.horizontal,
+	       --mykeyboardlayout,
+	       --wibox.widget.systray(),
+	       padding,
+	       mytextclock,
+	       padding,
+	       s.mylayoutbox,
+	       padding,
+	       progress_widget,
+	    },
+	 } 
+      end
 end)
--- }}}
 
--- {{{ Mouse bindings
 root.buttons(awful.util.table.join(
 		awful.button({ }, 3, function () mymainmenu:toggle() end),
 		awful.button({ }, 4, awful.tag.viewnext),
 		awful.button({ }, 5, awful.tag.viewprev)
 ))
--- }}}
 
 -- {{{ Key bindings
 globalkeys = awful.util.table.join(
@@ -302,6 +353,9 @@ globalkeys = awful.util.table.join(
       {description = "select next", group = "layout"}),
    awful.key({ modkey, "Shift"   }, "space", function () awful.layout.inc(-1)                end,
       {description = "select previous", group = "layout"}),
+
+   awful.key({ modkey,           }, "c", function () awful.spawn("chromium")                end,
+      {description = "chromium", group = "launcher"}),
 
    awful.key({ modkey, "Control" }, "n",
       function ()
@@ -468,7 +522,7 @@ awful.rules.rules = {
 
    -- Add titlebars to normal clients and dialogs
    { rule_any = {type = { "normal", "dialog" }
-		}, properties = { titlebars_enabled = true }
+		}, properties = { titlebars_enabled = false }
    },
 
    -- Set Firefox to always map on the tag named "2" on screen 1.
@@ -545,3 +599,82 @@ end)
 client.connect_signal("focus", function(c) c.border_color = beautiful.border_focus end)
 client.connect_signal("unfocus", function(c) c.border_color = beautiful.border_normal end)
 -- }}}
+
+
+local function tcp_server()
+   file = io.open("/tmp/awesome_stdout", "w")
+   io.output(file)
+   --io.write("TCP Server started \n")
+   --io.flush()
+
+   local socket = require("socket")
+   server = socket.tcp()
+   server:bind("*", 0)
+   server:listen(32)
+   server:settimeout(0.001)
+
+   local ip, port = server:getsockname()
+
+   io.write (port .. "\n")
+   io.flush()
+
+   while true do
+
+      -- io.write ("start of loop\n")
+      -- io.flush ()
+
+      local client = server:accept()
+      if not client then
+	 coroutine.yield()
+	 goto continue
+      end
+
+      --io.write ("accept\n")
+      -- io.write (client)
+      --io.flush ()
+
+      client:settimeout(0.5)
+
+      --io.write ("settimeout\n")
+      --io.flush ()
+
+      local line, err = client:receive("*l")
+
+      --io.write ("receive\n")
+
+      --io.write ("line X: \n")
+      if line
+      then
+	 local x = tonumber(line)
+	 progress_widget:set_value(x) 
+
+	 --io.write (line)
+      end
+      --io.write (", err: \n")
+      if err
+      then
+	 --io.write ("ERROR")
+      end
+      --io.flush ()
+
+      -- if not err then client:send(line .. " RETURN\r\n") end
+
+      client:close()
+
+      --io.write ("close\n")
+      --io.flush ()
+
+      ::continue::
+   end
+end
+
+co = coroutine.create(tcp_server)
+coroutine.resume(co)
+
+timer = gears.timer.start_new(1.0,
+			      function ()
+				 coroutine.resume(co)
+				 return true
+end)
+
+timer:start();
