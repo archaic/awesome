@@ -275,6 +275,25 @@ awful.screen.connect_for_each_screen(function(s)
 	    },
 	 } 
       end
+
+      if s.index == 2 then
+	 s.mywibox = awful.wibar({ position = "bottom", screen = s, height = "50" })
+
+	 s.mytaglist = awful.widget.taglist(s, awful.widget.taglist.filter.all, taglist_buttons)
+
+	 s.mytasklist = awful.widget.tasklist(s, awful.widget.tasklist.filter.currenttags, tasklist_buttons)
+
+	 s.mywibox:setup {
+	    layout = wibox.layout.align.horizontal,
+	    { -- Left widgets
+	       layout = wibox.layout.fixed.horizontal,
+	       s.mytaglist,
+	       s.mypromptbox,
+	    },
+	    s.mytasklist, -- Middle widget
+	    
+	 }
+      end
 end)
 
 root.buttons(awful.util.table.join(
